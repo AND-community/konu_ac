@@ -23,6 +23,7 @@ var manifest = pluginapi.Manifest{
 	Version:     "2.5.0",
 	Description: "Forum'da yeni konu oluşturma ve taslak yönetimi",
 	Author:      "AND",
+	Permissions: []string{pluginapi.IzinForum},
 }
 
 const (
