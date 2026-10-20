@@ -10,11 +10,11 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 
 	"github.com/lucian95511/and/internal/bbcode"
 	"github.com/lucian95511/and/internal/forum"
 	"github.com/lucian95511/and/internal/pluginapi"
+	"github.com/lucian95511/and/internal/ui"
 )
 
 var manifest = pluginapi.Manifest{
@@ -78,6 +78,11 @@ func main() {
 
 	dataDir := pluginapi.DataDir()
 	preCategory := pluginapi.Category()
+
+	// AND'ın etkin temasıyla aç; eski bir AND'da uç nokta yoksa varsayılan kalır.
+	if tema, err := client.GetTheme(); err == nil {
+		ui.Apply(ui.Theme(tema))
+	}
 
 	m := newModel(client, dataDir, preCategory)
 	p := tea.NewProgram(m, tea.WithAltScreen())
@@ -149,6 +154,9 @@ func newModel(client *pluginapi.Client, dataDir, preCategory string) model {
 	ia.ShowLineNumbers = false
 	ia.Blur()
 
+	ui.StyleInput(&bg)
+	ui.StyleTextarea(&ia)
+
 	katIdx := 0
 	if preCategory != "" {
 		for i, k := range forum.Categories {
@@ -181,12 +189,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
-		vw := msg.Width - 10
-		if vw < 20 {
-			vw = 60
-		}
-		m.icerik.SetWidth(vw)
-		ih := msg.Height - 18
+		vw := m.icW()
+		// Yazı alanları okuma genişliğinde kalır; tam ekranda 200 sütunluk
+		// satırlar yazarken de göz yorar.
+		m.baslik.Width = ui.Measure(vw) - 4
+		m.icerik.SetWidth(ui.Measure(vw))
+		// Çerçeve (4), başlık çubuğu (3), kategori (2), başlık alanı (3),
+		// içerik etiketi ve iki bilgi satırı (4), bildirim ve iki satıra
+		// kadar kısayol (3) — içerik alanı kalan yüksekliği alır.
+		ih := msg.Height - 19
 		if ih < 4 {
 			ih = 4
 		}
@@ -484,6 +495,24 @@ func (m model) keyTaslak(msg tea.KeyMsg) (model, tea.Cmd) {
 
 // ─── View ────────────────────────────────────────────────────────────────────
 
+// Görsel dil AND'ın forum ekranlarıyla ORTAKTIR (internal/ui): bu form,
+// forumdan n ile açıldığında forumun bir parçası gibi görünür.
+
+// icW, tam ekran çerçevenin içerik genişliğidir (bkz. ui.Page).
+func (m model) icW() int {
+	if m.w <= 0 {
+		return 72
+	}
+	return ui.ContentWidth(m.w)
+}
+
+// cerceve, formu AND'ın tam ekran çerçevesine koyar: form üstten başlar,
+// alt bilgi (ayraç, bildirim, kısayollar) her zaman en alttadır — bildirim
+// gelip gittikçe form yerinden oynamaz.
+func (m model) cerceve(govde, alt string) string {
+	return ui.Page(m.w, m.h, govde, ui.Divider(m.icW())+"\n"+alt)
+}
+
 func (m model) View() string {
 	if m.scr == screenTaslak {
 		return m.viewTaslak()
@@ -492,12 +521,14 @@ func (m model) View() string {
 }
 
 func (m model) viewForm() string {
-	var b strings.Builder
-
-	// ── Başlık + kategori satırı ──
+	w := m.icW()
 	kat := forum.Categories[m.katIdx]
-	sol := " "
-	sag := " "
+
+	var b strings.Builder
+	b.WriteString(ui.Header(w, []string{"Forum", kat, "Yeni konu"}, "") + "\n\n")
+
+	// ── Kategori seçici (başlık alanındayken ←/→ ile değişir) ──
+	sol, sag := " ", " "
 	if m.odak == odakBaslik {
 		if m.katIdx > 0 {
 			sol = "◀"
@@ -506,99 +537,59 @@ func (m model) viewForm() string {
 			sag = "▶"
 		}
 	}
-	katStr := stMuted.Render(sol) + " " + stKat.Render(kat) + " " + stMuted.Render(sag)
-	b.WriteString(stHeader.Render("Yeni Konu") + "  " + katStr + "\n\n")
+	b.WriteString(ui.S.Muted.Render("Kategori  ") + ui.S.Accent.Render(sol) + " " + ui.S.Pill.Render(kat) + " " + ui.S.Accent.Render(sag) + "\n\n")
 
 	// ── Başlık alanı ──
-	blbl := stLabel
-	if m.odak == odakBaslik {
-		blbl = stLabelAktif
+	etiket := func(ad string, aktif bool) string {
+		if aktif {
+			return ui.S.Title.Render(ad)
+		}
+		return ui.S.Muted.Render(ad)
 	}
-	b.WriteString(blbl.Render(fmt.Sprintf("Başlık  %d/%d", len([]rune(m.baslik.Value())), maxBaslik)) + "\n")
+	b.WriteString(etiket("Başlık", m.odak == odakBaslik) + "   " +
+		ui.S.Muted.Render(fmt.Sprintf("%d/%d", len([]rune(m.baslik.Value())), maxBaslik)) + "\n")
 	b.WriteString(m.baslik.View() + "\n\n")
 
 	// ── İçerik alanı ──
-	ilbl := stLabel
-	if m.odak == odakIcerik {
-		ilbl = stLabelAktif
-	}
-	icerikLen := len([]rune(m.icerik.Value()))
-	b.WriteString(ilbl.Render("İçerik  ") + charBar(icerikLen, maxIcerik) + "\n")
+	b.WriteString(etiket("İçerik", m.odak == odakIcerik) + "   " + charBar(len([]rune(m.icerik.Value())), maxIcerik) + "\n")
 	b.WriteString(m.icerik.View() + "\n")
-
-	b.WriteString(stMuted.Render("ctrl+k ile kod bloğu ekle  ·  ör: [code=python] ... [/code]") + "\n\n")
-
-	b.WriteString(stMuted.Render("Konular 5 gün sonra otomatik silinir.") + "\n\n")
+	b.WriteString(ui.S.Muted.Render("Kod bloğu için ") + ui.S.Key.Render("ctrl+k") + ui.S.Muted.Render("  ·  ör. [code=python] … [/code]") + "\n")
+	b.WriteString(ui.S.Subtle.Render("Konular 5 gün sonra otomatik silinir.") + "\n\n")
 
 	// ── Durum / hata ──
-	if m.gonderiyor {
-		b.WriteString(stWait.Render(" Gönderiliyor… ") + "\n\n")
-	} else if m.notice != "" {
-		if m.isOK {
-			b.WriteString(stOK.Render(m.notice))
-		} else {
-			b.WriteString(stErr.Render(m.notice))
-		}
-		b.WriteString("\n\n")
+	var alt strings.Builder
+	switch {
+	case m.gonderiyor:
+		alt.WriteString(ui.Notice(ui.KindPending, "Gönderiliyor") + "\n")
+	case m.notice != "" && m.isOK:
+		alt.WriteString(ui.Notice(ui.KindSuccess, m.notice) + "\n")
+	case m.notice != "":
+		alt.WriteString(ui.Notice(ui.KindError, m.notice) + "\n")
 	}
 
-	// ── Yardım satırı ──
+	var hints []ui.Hint
 	if m.odak == odakBaslik {
-		b.WriteString(stMuted.Render("←/→ kategori    tab/enter içeriğe geç    ctrl+s gönder    ctrl+d taslak    esc çıkış"))
+		hints = []ui.Hint{ui.H("←→", "kategori"), ui.H("tab", "içeriğe geç"), ui.H("ctrl+s", "gönder"), ui.H("ctrl+d", "taslak"), ui.H("esc", "çıkış")}
 	} else {
-		b.WriteString(stMuted.Render("tab başlığa dön    enter alt satır    ctrl+k kod bloğu    ctrl+s gönder    ctrl+d taslak    esc çıkış"))
+		hints = []ui.Hint{ui.H("tab", "başlığa dön"), ui.H("ctrl+k", "kod bloğu"), ui.H("ctrl+s", "gönder"), ui.H("ctrl+d", "taslak"), ui.H("esc", "çıkış")}
 	}
-
-	box := stBox.Render(b.String())
-	if m.w > 0 && m.h > 0 {
-		// Dikeyde üstten sabitlenir: önizleme kutusu yazarken boy değiştirdikçe
-		// tüm formun ortalanarak zıplaması/ekranda kalıntı bırakması önlenir.
-		return lipgloss.Place(m.w, m.h, lipgloss.Center, lipgloss.Top, box)
-	}
-	return box
+	alt.WriteString(ui.KeyHints(w, hints...))
+	return m.cerceve(b.String(), alt.String())
 }
 
 func (m model) viewTaslak() string {
+	w := m.icW()
 	var b strings.Builder
-	b.WriteString(stHeader.Render("Taslaklar") + "\n\n")
+	b.WriteString(ui.Header(w, []string{"Forum", "Yeni konu", "Taslaklar"}, "") + "\n\n")
 
 	for i, t := range m.taslaklar {
-		onizleme := kisalt(strings.TrimSpace(t.Icerik), 50)
-		katStr := stMuted.Render("[" + t.Kategori + "]")
-		if i == m.taslakIdx {
-			b.WriteString(stSel.Render("  ▶ "+kisalt(t.Baslik, 48)) + "  " + katStr + "\n")
-			b.WriteString(stSelMeta.Render("    "+onizleme) + "\n\n")
-		} else {
-			b.WriteString(stNorm.Render("    "+kisalt(t.Baslik, 48)) + "  " + katStr + "\n")
-			b.WriteString(stMuted.Render("    "+onizleme) + "\n\n")
-		}
+		secili := i == m.taslakIdx
+		b.WriteString(ui.Row(w, secili, ui.Seg{Text: kisalt(t.Baslik, 60), Bold: true}, ui.M("  ·  "+t.Kategori)) + "\n")
+		b.WriteString(ui.Row(w, secili, ui.M(kisalt(strings.TrimSpace(t.Icerik), 70))) + "\n\n")
 	}
 
-	b.WriteString(stMuted.Render("enter  düzenle    p  yayınla    x  sil    esc  geri"))
-
-	box := stBox.Render(b.String())
-	if m.w > 0 && m.h > 0 {
-		return lipgloss.Place(m.w, m.h, lipgloss.Center, lipgloss.Center, box)
-	}
-	return box
+	return m.cerceve(b.String(), ui.KeyHints(w, ui.H("↑↓", "seç"), ui.H("enter", "düzenle"), ui.H("p", "yayınla"), ui.H("x", "sil"), ui.H("esc", "geri")))
 }
-
-// ─── Stiller ─────────────────────────────────────────────────────────────────
-
-var (
-	stHeader     = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("63"))
-	stKat        = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("220"))
-	stMuted      = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	stSel        = lipgloss.NewStyle().Background(lipgloss.Color("57")).Foreground(lipgloss.Color("255")).Bold(true)
-	stSelMeta    = lipgloss.NewStyle().Background(lipgloss.Color("57")).Foreground(lipgloss.Color("189"))
-	stNorm       = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-	stOK         = lipgloss.NewStyle().Foreground(lipgloss.Color("42"))
-	stErr        = lipgloss.NewStyle().Foreground(lipgloss.Color("203"))
-	stWait       = lipgloss.NewStyle().Background(lipgloss.Color("241")).Foreground(lipgloss.Color("255"))
-	stLabel      = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
-	stLabelAktif = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("63"))
-	stBox        = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("63")).Padding(1, 3)
-)
 
 // ─── Yardımcılar ─────────────────────────────────────────────────────────────
 
@@ -610,19 +601,16 @@ func kisalt(s string, maks int) string {
 	return string(r[:maks-1]) + "…"
 }
 
+// charBar, içerik uzunluğunu sınırına göre renklenen bir çubukla gösterir —
+// AND'ın forum yanıt formundaki sayaçla aynı biçim.
 func charBar(suanki, maks int) string {
 	pct := float64(suanki) / float64(maks)
-	dolu := int(pct * 16)
-	if dolu > 16 {
-		dolu = 16
-	}
-	bar := strings.Repeat("█", dolu) + strings.Repeat("░", 16-dolu)
-	renk := lipgloss.Color("42")
+	renk := ui.P.Success
 	if pct > 0.75 {
-		renk = lipgloss.Color("220")
+		renk = ui.P.Warning
 	}
 	if pct > 0.92 {
-		renk = lipgloss.Color("203")
+		renk = ui.P.Error
 	}
-	return lipgloss.NewStyle().Foreground(renk).Render(fmt.Sprintf("%s %d/%d", bar, suanki, maks))
+	return ui.Bar(suanki, maks, 16, renk) + " " + ui.S.Muted.Render(fmt.Sprintf("%d/%d", suanki, maks))
 }
