@@ -12,9 +12,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/lucian95511/and/internal/bbcode"
-	"github.com/lucian95511/and/internal/forum"
 	"github.com/lucian95511/and/internal/pluginapi"
 	"github.com/lucian95511/and/internal/ui"
+	"github.com/lucian95511/and/protokol"
 )
 
 var manifest = pluginapi.Manifest{
@@ -159,7 +159,7 @@ func newModel(client *pluginapi.Client, dataDir, preCategory string) model {
 
 	katIdx := 0
 	if preCategory != "" {
-		for i, k := range forum.Categories {
+		for i, k := range protokol.Kategoriler {
 			if strings.EqualFold(k, preCategory) {
 				katIdx = i
 				break
@@ -256,7 +256,7 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 		baslik := strings.TrimSpace(m.baslik.Value())
 		icerik := strings.TrimSpace(m.icerik.Value())
 		if baslik != "" || icerik != "" {
-			kat := forum.Categories[m.katIdx]
+			kat := protokol.Kategoriler[m.katIdx]
 			ts := taslakOku(m.dataDir, kat)
 			t := taslak{Kategori: kat, Baslik: baslik, Icerik: icerik}
 			if m.editMode {
@@ -275,7 +275,7 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 			if msg.String() == "left" && m.katIdx > 0 {
 				m.katIdx--
 				m.notice = ""
-			} else if msg.String() == "right" && m.katIdx < len(forum.Categories)-1 {
+			} else if msg.String() == "right" && m.katIdx < len(protokol.Kategoriler)-1 {
 				m.katIdx++
 				m.notice = ""
 			}
@@ -318,7 +318,7 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 
 	// Taslak listesi
 	case "ctrl+t":
-		kat := forum.Categories[m.katIdx]
+		kat := protokol.Kategoriler[m.katIdx]
 		ts := taslakOku(m.dataDir, kat)
 		if len(ts) > 0 {
 			m.taslaklar = ts
@@ -347,7 +347,7 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 			m.baslik.Blur()
 			return m, m.icerik.Focus()
 		}
-		kat := forum.Categories[m.katIdx]
+		kat := protokol.Kategoriler[m.katIdx]
 		ts := taslakOku(m.dataDir, kat)
 		t := taslak{Kategori: kat, Baslik: baslik, Icerik: icerik}
 		if m.editMode {
@@ -391,7 +391,7 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 		m.notice = ""
 		client := m.client
 		isDuzenle, duzenIdx := m.editMode, m.editIdx
-		kat := forum.Categories[m.katIdx]
+		kat := protokol.Kategoriler[m.katIdx]
 		dataDir := m.dataDir
 		return m, func() tea.Msg {
 			if err := client.CreatePost(kat, baslik, icerik); err != nil {
@@ -443,7 +443,7 @@ func (m model) keyTaslak(msg tea.KeyMsg) (model, tea.Cmd) {
 			m.editMode = true
 			m.editIdx = m.taslakIdx
 			// kategori indeksini ayarla
-			for i, k := range forum.Categories {
+			for i, k := range protokol.Kategoriler {
 				if k == t.Kategori {
 					m.katIdx = i
 					break
@@ -479,7 +479,7 @@ func (m model) keyTaslak(msg tea.KeyMsg) (model, tea.Cmd) {
 	case "x":
 		if m.taslakIdx < len(m.taslaklar) {
 			m.taslaklar = append(m.taslaklar[:m.taslakIdx], m.taslaklar[m.taslakIdx+1:]...)
-			taslakYaz(m.dataDir, forum.Categories[m.katIdx], m.taslaklar)
+			taslakYaz(m.dataDir, protokol.Kategoriler[m.katIdx], m.taslaklar)
 			if m.taslakIdx >= len(m.taslaklar) && m.taslakIdx > 0 {
 				m.taslakIdx--
 			}
@@ -522,7 +522,7 @@ func (m model) View() string {
 
 func (m model) viewForm() string {
 	w := m.icW()
-	kat := forum.Categories[m.katIdx]
+	kat := protokol.Kategoriler[m.katIdx]
 
 	var b strings.Builder
 	b.WriteString(ui.Header(w, []string{"Forum", kat, "Yeni konu"}, "") + "\n\n")
@@ -533,7 +533,7 @@ func (m model) viewForm() string {
 		if m.katIdx > 0 {
 			sol = "◀"
 		}
-		if m.katIdx < len(forum.Categories)-1 {
+		if m.katIdx < len(protokol.Kategoriler)-1 {
 			sag = "▶"
 		}
 	}
