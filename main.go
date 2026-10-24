@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/lucian95511/and/dil"
 	"github.com/lucian95511/and/internal/bbcode"
 	"github.com/lucian95511/and/internal/pluginapi"
 	"github.com/lucian95511/and/internal/ui"
@@ -20,7 +21,7 @@ import (
 var manifest = pluginapi.Manifest{
 	Name:        "konu_ac",
 	Label:       "",
-	Version:     "2.5.0",
+	Version:     "2.6.0",
 	Description: "Forum'da yeni konu oluşturma ve taslak yönetimi",
 	Author:      "AND",
 	Permissions: []string{pluginapi.IzinForum},
@@ -70,6 +71,8 @@ func main() {
 		fmt.Println(string(data))
 		return
 	}
+	// AND, eklentiyi kendi etkin dilinde açar (AND_DIL).
+	dil.OrtamdanAyarla()
 
 	client, err := pluginapi.NewClientFromEnv()
 	if err != nil {
@@ -144,12 +147,12 @@ type model struct {
 
 func newModel(client *pluginapi.Client, dataDir, preCategory string) model {
 	bg := textinput.New()
-	bg.Placeholder = "konu başlığı…"
+	bg.Placeholder = dil.T("konu başlığı…")
 	bg.CharLimit = maxBaslik
 	bg.Focus()
 
 	ia := textarea.New()
-	ia.Placeholder = "konu içeriği…"
+	ia.Placeholder = dil.T("konu içeriği…")
 	ia.SetHeight(10)
 	ia.CharLimit = maxIcerik
 	ia.ShowLineNumbers = false
@@ -208,7 +211,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case gonderildiMsg:
 		m.gonderiyor = false
 		if msg.err != nil {
-			m.notice = "Hata: " + msg.err.Error()
+			m.notice = dil.T("Hata: ") + msg.err.Error()
 			m.isOK = false
 			m.odak = odakBaslik
 			m.icerik.Blur()
@@ -329,7 +332,7 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 			m.scr = screenTaslak
 			return m, nil
 		}
-		m.notice = "Bu kategoride taslak yok"
+		m.notice = dil.T("Bu kategoride taslak yok")
 		m.isOK = false
 
 	// Taslak kaydet
@@ -337,12 +340,12 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 		baslik := strings.TrimSpace(m.baslik.Value())
 		icerik := strings.TrimSpace(m.icerik.Value())
 		if baslik == "" && icerik == "" {
-			m.notice = "Başlık veya içerik boş olamaz"
+			m.notice = dil.T("Başlık veya içerik boş olamaz")
 			m.isOK = false
 			return m, nil
 		}
 		if !bbcode.Dengeli(icerik) {
-			m.notice = "Kapanmamış [code] etiketi var, kontrol edin"
+			m.notice = dil.T("Kapanmamış [code] etiketi var, kontrol edin")
 			m.isOK = false
 			m.odak = odakIcerik
 			m.baslik.Blur()
@@ -357,7 +360,7 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 			ts = append(ts, t)
 		}
 		taslakYaz(m.dataDir, kat, ts)
-		m.notice = "Taslak kaydedildi ✔"
+		m.notice = dil.T("Taslak kaydedildi ✔")
 		m.isOK = true
 		return m, nil
 
@@ -366,21 +369,21 @@ func (m model) keyForm(msg tea.KeyMsg) (model, tea.Cmd) {
 		baslik := strings.TrimSpace(m.baslik.Value())
 		icerik := strings.TrimSpace(m.icerik.Value())
 		if baslik == "" {
-			m.notice = "Başlık boş olamaz"
+			m.notice = dil.T("Başlık boş olamaz")
 			m.isOK = false
 			m.odak = odakBaslik
 			m.icerik.Blur()
 			return m, m.baslik.Focus()
 		}
 		if icerik == "" {
-			m.notice = "İçerik boş olamaz"
+			m.notice = dil.T("İçerik boş olamaz")
 			m.isOK = false
 			m.odak = odakIcerik
 			m.baslik.Blur()
 			return m, m.icerik.Focus()
 		}
 		if !bbcode.Dengeli(icerik) {
-			m.notice = "Kapanmamış [code] etiketi var, kontrol edin"
+			m.notice = dil.T("Kapanmamış [code] etiketi var, kontrol edin")
 			m.isOK = false
 			m.odak = odakIcerik
 			m.baslik.Blur()
@@ -526,7 +529,7 @@ func (m model) viewForm() string {
 	kat := protokol.Kategoriler[m.katIdx]
 
 	var b strings.Builder
-	b.WriteString(ui.Header(w, []string{"Forum", kat, "Yeni konu"}, "") + "\n\n")
+	b.WriteString(ui.Header(w, []string{dil.T("Forum"), dil.T(kat), dil.T("Yeni konu")}, "") + "\n\n")
 
 	// ── Kategori seçici (başlık alanındayken ←/→ ile değişir) ──
 	sol, sag := " ", " "
@@ -538,7 +541,7 @@ func (m model) viewForm() string {
 			sag = "▶"
 		}
 	}
-	b.WriteString(ui.S.Muted.Render("Kategori  ") + ui.S.Accent.Render(sol) + " " + ui.S.Pill.Render(kat) + " " + ui.S.Accent.Render(sag) + "\n\n")
+	b.WriteString(ui.S.Muted.Render(dil.T("Kategori  ")) + ui.S.Accent.Render(sol) + " " + ui.S.Pill.Render(dil.T(kat)) + " " + ui.S.Accent.Render(sag) + "\n\n")
 
 	// ── Başlık alanı ──
 	etiket := func(ad string, aktif bool) string {
@@ -547,21 +550,21 @@ func (m model) viewForm() string {
 		}
 		return ui.S.Muted.Render(ad)
 	}
-	b.WriteString(etiket("Başlık", m.odak == odakBaslik) + "   " +
+	b.WriteString(etiket(dil.T("Başlık"), m.odak == odakBaslik) + "   " +
 		ui.S.Muted.Render(fmt.Sprintf("%d/%d", len([]rune(m.baslik.Value())), maxBaslik)) + "\n")
 	b.WriteString(m.baslik.View() + "\n\n")
 
 	// ── İçerik alanı ──
-	b.WriteString(etiket("İçerik", m.odak == odakIcerik) + "   " + charBar(len([]rune(m.icerik.Value())), maxIcerik) + "\n")
+	b.WriteString(etiket(dil.T("İçerik"), m.odak == odakIcerik) + "   " + charBar(len([]rune(m.icerik.Value())), maxIcerik) + "\n")
 	b.WriteString(m.icerik.View() + "\n")
-	b.WriteString(ui.S.Muted.Render("Kod bloğu için ") + ui.S.Key.Render("ctrl+k") + ui.S.Muted.Render("  ·  ör. [code=python] … [/code]") + "\n")
-	b.WriteString(ui.S.Subtle.Render("Konular 5 gün sonra otomatik silinir.") + "\n\n")
+	b.WriteString(ui.S.Muted.Render(dil.T("Kod bloğu için ")) + ui.S.Key.Render("ctrl+k") + ui.S.Muted.Render(dil.T("  ·  ör. [code=python] … [/code]")) + "\n")
+	b.WriteString(ui.S.Subtle.Render(dil.T("Konular 5 gün sonra otomatik silinir.")) + "\n\n")
 
 	// ── Durum / hata ──
 	var alt strings.Builder
 	switch {
 	case m.gonderiyor:
-		alt.WriteString(ui.Notice(ui.KindPending, "Gönderiliyor") + "\n")
+		alt.WriteString(ui.Notice(ui.KindPending, dil.T("Gönderiliyor")) + "\n")
 	case m.notice != "" && m.isOK:
 		alt.WriteString(ui.Notice(ui.KindSuccess, m.notice) + "\n")
 	case m.notice != "":
@@ -570,9 +573,9 @@ func (m model) viewForm() string {
 
 	var hints []ui.Hint
 	if m.odak == odakBaslik {
-		hints = []ui.Hint{ui.H("←→", "kategori"), ui.H("tab", "içeriğe geç"), ui.H("ctrl+s", "gönder"), ui.H("ctrl+d", "taslak"), ui.H("esc", "çıkış")}
+		hints = []ui.Hint{ui.H("←→", dil.T("kategori")), ui.H("tab", dil.T("içeriğe geç")), ui.H("ctrl+s", dil.T("gönder")), ui.H("ctrl+d", dil.T("taslak")), ui.H("esc", dil.T("çıkış"))}
 	} else {
-		hints = []ui.Hint{ui.H("tab", "başlığa dön"), ui.H("ctrl+k", "kod bloğu"), ui.H("ctrl+s", "gönder"), ui.H("ctrl+d", "taslak"), ui.H("esc", "çıkış")}
+		hints = []ui.Hint{ui.H("tab", dil.T("başlığa dön")), ui.H("ctrl+k", dil.T("kod bloğu")), ui.H("ctrl+s", dil.T("gönder")), ui.H("ctrl+d", dil.T("taslak")), ui.H("esc", dil.T("çıkış"))}
 	}
 	alt.WriteString(ui.KeyHints(w, hints...))
 	return m.cerceve(b.String(), alt.String())
@@ -581,15 +584,15 @@ func (m model) viewForm() string {
 func (m model) viewTaslak() string {
 	w := m.icW()
 	var b strings.Builder
-	b.WriteString(ui.Header(w, []string{"Forum", "Yeni konu", "Taslaklar"}, "") + "\n\n")
+	b.WriteString(ui.Header(w, []string{dil.T("Forum"), dil.T("Yeni konu"), dil.T("Taslaklar")}, "") + "\n\n")
 
 	for i, t := range m.taslaklar {
 		secili := i == m.taslakIdx
-		b.WriteString(ui.Row(w, secili, ui.Seg{Text: kisalt(t.Baslik, 60), Bold: true}, ui.M("  ·  "+t.Kategori)) + "\n")
+		b.WriteString(ui.Row(w, secili, ui.Seg{Text: kisalt(t.Baslik, 60), Bold: true}, ui.M("  ·  "+dil.T(t.Kategori))) + "\n")
 		b.WriteString(ui.Row(w, secili, ui.M(kisalt(strings.TrimSpace(t.Icerik), 70))) + "\n\n")
 	}
 
-	return m.cerceve(b.String(), ui.KeyHints(w, ui.H("↑↓", "seç"), ui.H("enter", "düzenle"), ui.H("p", "yayınla"), ui.H("x", "sil"), ui.H("esc", "geri")))
+	return m.cerceve(b.String(), ui.KeyHints(w, ui.H("↑↓", dil.T("seç")), ui.H("enter", dil.T("düzenle")), ui.H("p", dil.T("yayınla")), ui.H("x", dil.T("sil")), ui.H("esc", dil.T("geri"))))
 }
 
 // ─── Yardımcılar ─────────────────────────────────────────────────────────────
