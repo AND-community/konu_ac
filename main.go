@@ -13,6 +13,7 @@ import (
 
 	"github.com/lucian95511/and/dil"
 	"github.com/lucian95511/and/internal/bbcode"
+	"github.com/lucian95511/and/internal/dosya"
 	"github.com/lucian95511/and/internal/pluginapi"
 	"github.com/lucian95511/and/internal/ui"
 	"github.com/lucian95511/and/protokol"
@@ -21,7 +22,7 @@ import (
 var manifest = pluginapi.Manifest{
 	Name:        "konu_ac",
 	Label:       "",
-	Version:     "2.6.0",
+	Version:     "2.6.1",
 	Description: "Forum'da yeni konu oluşturma ve taslak yönetimi",
 	Author:      "AND",
 	Permissions: []string{pluginapi.IzinForum},
@@ -60,7 +61,7 @@ func taslakOku(dataDir, kategori string) []taslak {
 
 func taslakYaz(dataDir, kategori string, ts []taslak) {
 	data, _ := json.Marshal(taslakDosya{Taslaklar: ts})
-	_ = os.WriteFile(taslakYolu(dataDir, kategori), data, 0o600)
+	_ = dosya.AtomikYaz(taslakYolu(dataDir, kategori), data, 0o600)
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────────
