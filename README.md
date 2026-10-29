@@ -1,4 +1,4 @@
-# and-plugin-konu-ac — Konu Açma Eklentisi
+# and-plugin-konu_ac — Konu Açma Eklentisi
 
 Yeni forum konusu oluştur, taslak kaydet, kategoriler arasında gezin.
 
@@ -6,22 +6,25 @@ Yeni forum konusu oluştur, taslak kaydet, kategoriler arasında gezin.
 
 ## Genel Bakış
 
-`and-plugin-konu-ac` forum yazma işlemlerini yönetir. Ana forum görünümü salt okunurdur; tüm konu oluşturma bu eklenti üzerinden gerçekleşir.
+`and-plugin-konu_ac` forum yazma işlemlerini yönetir. Ana forum görünümü salt okunurdur; tüm konu oluşturma bu eklenti üzerinden gerçekleşir.
 
-Bu eklenti menüde **görünmez** (`Label` alanı boştur). Forumdan `n` tuşuna basıldığında AND tarafından **doğrudan ana süreç içinde** açılır — ayrı bir binary başlatılmaz, geçiş anında gerçekleşir.
+Bu eklenti menüde **görünmez** (`Label` alanı boştur). Forumdan `n` tuşuna basıldığında AND onu seçili kategoriyle (`AND_CATEGORY`) aynı terminalde başlatır; eklenti kapanınca forum listesi yenilenir. Eklenti kurulu değilse `n` tuşu çalışmaz ve forumda yeni konu açılamaz.
 
 ---
 
 ## Kurulum
 
+Konu Aç ayrı bir depodur; [AND](https://github.com/AND-community/AND) deposunun `Eklentiler/` klasörüne klonlanıp AND'ın kök dizininden derlenir:
+
 ```bash
-go build -o and-plugin-konu-ac ./Eklentiler/konu_ac
+git clone https://github.com/AND-community/konu_ac.git Eklentiler/konu_ac
+go build -o Eklentiler/konu_ac/and-plugin-konu_ac ./Eklentiler/konu_ac
 
 # Windows
-go build -o and-plugin-konu-ac.exe ./Eklentiler/konu_ac
+go build -o Eklentiler/konu_ac/and-plugin-konu_ac.exe ./Eklentiler/konu_ac
 ```
 
-Binary AND dizininde bulunmalıdır; AND başlangıçta manifest JSON dosyasını okur.
+AND, kendi binary'sinin yanındaki `Eklentiler/konu_ac/plugin.json` ile bu binary'yi açılışta bulur. Binary'nin adı plugin.json'daki `name` alanından gelir (`and-plugin-konu_ac`).
 
 ---
 
@@ -124,7 +127,7 @@ Neden yanlış sonuç veriyor?
 Forumda konu onay sistemi yoktur: gönderilen konu hemen ağda yayılır ve,
 kim yazmış olursa olsun, oluşturulduktan **5 gün** sonra otomatik olarak
 silinir. Kurucu/moderatör gerektiğinde bir konuyu bu süreyi beklemeden
-Yönetici Paneli'nden erken silebilir (bkz. [Eklentiler/admin/README.md](../admin/README.md)).
+Yönetici Paneli'nden erken silebilir (bkz. [Eklentiler/admin/README.md](https://github.com/AND-community/AND/blob/main/Eklentiler/admin/README.md)).
 
 ---
 
