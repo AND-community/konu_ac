@@ -14,9 +14,9 @@ import (
 	"github.com/lucian95511/and/dil"
 	"github.com/lucian95511/and/internal/bbcode"
 	"github.com/lucian95511/and/internal/dosya"
-	"github.com/lucian95511/and/internal/pluginapi"
-	"github.com/lucian95511/and/internal/ui"
+	"github.com/lucian95511/and/pluginapi"
 	"github.com/lucian95511/and/protokol"
+	"github.com/lucian95511/and/ui"
 )
 
 var manifest = pluginapi.Manifest{
@@ -500,7 +500,7 @@ func (m model) keyTaslak(msg tea.KeyMsg) (model, tea.Cmd) {
 
 // ─── View ────────────────────────────────────────────────────────────────────
 
-// Görsel dil AND'ın forum ekranlarıyla ORTAKTIR (internal/ui): bu form,
+// Görsel dil AND'ın forum ekranlarıyla ORTAKTIR (ui): bu form,
 // forumdan n ile açıldığında forumun bir parçası gibi görünür.
 
 // icW, tam ekran çerçevenin içerik genişliğidir (bkz. ui.Page).
