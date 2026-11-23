@@ -5,5 +5,6 @@
   "description": "Yeni konu oluşturma ve taslak yönetimi (menüde gizli — forumdan n ile açılır)",
   "author":      "AND",
   "permissions": ["forum"],
+  "category":    "content",
   "requires":    []
 }
