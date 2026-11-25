@@ -2,6 +2,10 @@
 
 **English** · [Türkçe](README.tr.md)
 
+> **This plugin has been merged into AND's Forum plugin** (`Eklentiler/forum` in the
+> [AND](https://github.com/AND-community/AND) repository). New topics, per-category drafts and the
+> draft files (`taslaklar_<category>.json`) now live there; AND no longer ships `konu_ac`.
+
 Create new forum topics for [AND](https://github.com/AND-community/AND), save drafts and move
 between categories. ("Konu aç" is Turkish for "open a topic".)
 

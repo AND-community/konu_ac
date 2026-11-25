@@ -2,6 +2,10 @@
 
 [English](README.md) · **Türkçe**
 
+> **Bu eklenti AND'ın Forum eklentisine katıldı** ([AND](https://github.com/AND-community/AND)
+> deposunda `Eklentiler/forum`). Yeni konu, kategori başına taslaklar ve taslak dosyaları
+> (`taslaklar_<kategori>.json`) artık orada; AND `konu_ac`'ı artık birlikte getirmiyor.
+
 [AND](https://github.com/AND-community/AND) için yeni forum konusu oluştur, taslak kaydet,
 kategoriler arasında gezin.
 
